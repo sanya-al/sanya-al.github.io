@@ -195,7 +195,7 @@
     let words = [];
     let wordCluesMap = {};
     let wordCluesLoaded = false;
-    fetch('word-clues.json')
+    fetch('word-clues-2.json')
       .then(response => response.json())
       .then(data => {
         words = data.map(entry => entry.Answer);
@@ -211,7 +211,7 @@
       })
       .catch(err => {
         document.getElementById('loader').textContent = 'Failed to load word list.';
-        console.error('Failed to load word-clues.json:', err);
+        console.error('Failed to load word-clues-2.json:', err);
       });
 
     let targetWord = "";
