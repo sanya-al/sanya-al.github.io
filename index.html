@@ -195,7 +195,7 @@
     let words = [];
     let wordCluesMap = {};
     let wordCluesLoaded = false;
-    fetch('word-clues.json')
+    fetch('word-clues-2.json')
       .then(response => response.json())
       .then(data => {
         words = data.map(entry => entry.Answer);
@@ -211,7 +211,7 @@
       })
       .catch(err => {
         document.getElementById('loader').textContent = 'Failed to load word list.';
-        console.error('Failed to load word-clues.json:', err);
+        console.error('Failed to load word-clues-2.json:', err);
       });
 
     let targetWord = "";
@@ -700,7 +700,7 @@
     encourageMsg.style.display = 'none';
 
     // Load flower letters from JSON
-    fetch('flower-letters.json')
+    fetch('flower-letters-2.json')
       .then(response => response.json())
       .then(data => {
         // Set center letter
@@ -711,7 +711,7 @@
         shuffleBtn.disabled = false; // Enable after loading
       })
       .catch(err => {
-        console.error('Failed to load flower-letters.json:', err);
+        console.error('Failed to load flower-letters-2.json:', err);
       });
   </script>
 </body>
