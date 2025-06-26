@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Wordflower Hint Tester</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      background-color: #fafafa;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px;
+    }
+    .game-box {
+      background: white;
+      padding: 24px;
+      border-radius: 8px;
+      border: 2px solid #ccc;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      text-align: center;
+      max-width: 400px;
+      width: 100%;
+    }
+    .hint {
+      font-size: 2.5rem;
+      letter-spacing: 0.5rem;
+      margin: 20px 0;
+    }
+    input[type="text"] {
+      padding: 8px;
+      font-size: 1rem;
+      width: 80%;
+      margin-bottom: 12px;
+    }
+    .btn {
+      padding: 10px 20px;
+      font-size: 1rem;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 8px;
+    }
+    .reveal-btn {
+      background-color: #0077cc;
+      color: white;
+    }
+    .guess-btn {
+      background-color: #28a745;
+      color: white;
+    }
+    .disabled {
+      background-color: #aaa !important;
+      cursor: not-allowed;
+    }
+    .guesses {
+      margin-top: 24px;
+      text-align: left;
+    }
+    .hamburger {
+      position: absolute;
+      top: 24px;
+      right: 32px;
+      width: 32px;
+      height: 32px;
+      cursor: pointer;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+    .hamburger span {
+      display: block;
+      width: 24px;
+      height: 3px;
+      margin: 4px 0;
+      background: #333;
+      border-radius: 2px;
+      transition: 0.3s;
+    }
+    .menu {
+      position: absolute;
+      top: 60px;
+      right: 32px;
+      background: #fff;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      padding: 12px 0;
+      min-width: 180px;
+      z-index: 101;
+      display: none;
+    }
+    .menu.open {
+      display: block;
+    }
+    .menu-option {
+      padding: 10px 24px;
+      cursor: pointer;
+      font-size: 1rem;
+      text-align: left;
+      background: none;
+      border: none;
+      width: 100%;
+      outline: none;
+    }
+    .menu-option.selected {
+      background: #e6f0ff;
+      font-weight: bold;
+    }
+    #milestoneLabels > div {
+      font-family: Arial, sans-serif;
+      padding-right: 20px;
+      /* Add more styles here */
+    }
+  </style>
+</head>
+<body>
+  <div class="hamburger" id="hamburgerMenu" title="Hint Mode Menu">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+  <div class="menu" id="hintModeMenu">
+    <button class="menu-option" id="modeBlanks">Fill in the blanks</button>
+    <button class="menu-option" id="modeCrossword">Crossword hints</button>
+    <button class="menu-option" id="modeAI">AI hints</button>
+    <button class="menu-option" id="modeCrosswordLetter">Crossword hint with letter</button>
+    <hr style="margin: 8px 0;">
+    <label class="menu-option" style="display: flex; align-items: center;">
+      <input type="checkbox" id="celebrationToggle" style="margin-right: 8px;"> Celebration
+    </label>
+    <label class="menu-option" style="display: flex; align-items: center;">
+      <input type="checkbox" id="progressToggle" style="margin-right: 8px;"> Progress Bar
+    </label>
+  </div>
+  <div class="game-box">
+    <div id="loader" style="display: block; text-align: center; font-size: 1.2rem; margin: 40px 0;">Loading word list...</div>
+    <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 10px;">
+      <div id = "game-box-container">
+        <div id="progressBarContainer" style="width: 100%; max-width: 400px; margin: 20px auto 0; display: none; position: relative; padding-top: 20px;">
+          <div style="background: #eee; border-radius: 8px; height: 18px; width: 100%; overflow: hidden; position: relative;">
+            <div id="progressBar" style="background: linear-gradient(90deg, #2996c7, #28a745); height: 100%; width: 0%; transition: width 0.5s; border-radius: 8px; position: absolute; left: 0; top: 0;"></div>
+            <div id="milestoneMarkers" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none;"></div>
+          </div>
+          <div id="milestoneLabels" style="position: relative; width: 100%; height: 18px; margin-top: 2px;"></div>
+          <div id="encourageMsg" style="color: #555; margin-top: 5px; margin-bottom: 20px; font-size: 1rem; display: none;"></div>
+        </div>
+        <div id="milestoneMsg" style="color: #0077cc; margin-top: 8px; font-weight: bold; display: none; font-size: 1.2rem;"></div>
+        <div id="hintContainer" style="display: none; text-align: center;">
+          <div class="hint" id="hint" style="display: inline-block; vertical-align: middle;">_ _ _ _</div>
+          <button class="btn reveal-btn" id="revealBtn" style="background: none; border: none; box-shadow: none; padding: 0; margin-left: 8px; font-size: 1.5rem; vertical-align: middle; display: none;" title="Reveal Letter">
+            <span id="eyeIcon" style="pointer-events: none;">&#128065;</span>
+          </button>
+        </div>
+        <div id="incorrectMsg" style="color: red; margin-top: 8px; display: none;"></div>
+        <div id="correctMsg" style="color: #28a745; margin-top: 8px; font-weight: bold; display: none; font-size: 1.2rem;"></div>
+        <div id = "game-input"> 
+          <input type="text" id="guessInput" placeholder="Guess the word" />
+    <button class="btn guess-btn" id="guessBtn" style="margin-left: 10px;">Submit Guess</button>
+    <button class="btn" id="showHintBtn" style="margin-right: 10px;">Show Hint</button>
+    </div>
+    <br>
+    <!--<img src="spellments-june-6.png" width = "300px" alt="My Image"/>-->
+    <svg id="flowerSVG" width="300" height="300" viewBox="0 0 300 300">
+      <!-- Outer blue circles, 25% smaller, evenly spaced -->
+      <circle cx="150" cy="60" r="37.5" fill="#2996c7"/>
+      <circle cx="230" cy="105" r="37.5" fill="#2996c7"/>
+      <circle cx="230" cy="195" r="37.5" fill="#2996c7"/>
+      <circle cx="150" cy="240" r="37.5" fill="#2996c7"/>
+      <circle cx="70" cy="195" r="37.5" fill="#2996c7"/>
+      <circle cx="70" cy="105" r="37.5" fill="#2996c7"/>
+      <!-- Center circle, 25% smaller -->
+      <circle cx="150" cy="150" r="37.5" fill="#e3eff6"/>
+      <!-- Letters, perfectly centered -->
+      <g id="flowerLetters">
+        <text x="150" y="150" text-anchor="middle" dominant-baseline="middle" font-size="30" font-family="Arial" fill="#222" font-weight="bold">M</text>
+        <text id="outer0" x="150" y="60" text-anchor="middle" dominant-baseline="middle" font-size="24" font-family="Arial" fill="#fff">R</text>
+        <text id="outer1" x="230" y="105" text-anchor="middle" dominant-baseline="middle" font-size="24" font-family="Arial" fill="#fff">O</text>
+        <text id="outer2" x="230" y="195" text-anchor="middle" dominant-baseline="middle" font-size="24" font-family="Arial" fill="#fff">S</text>
+        <text id="outer3" x="150" y="240" text-anchor="middle" dominant-baseline="middle" font-size="24" font-family="Arial" fill="#fff">C</text>
+        <text id="outer4" x="70" y="195" text-anchor="middle" dominant-baseline="middle" font-size="24" font-family="Arial" fill="#fff">T</text>
+        <text id="outer5" x="70" y="105" text-anchor="middle" dominant-baseline="middle" font-size="24" font-family="Arial" fill="#fff">I</text>
+      </g>
+    </svg>
+    <button class="btn" id="shuffleBtn" style="margin-left: 10px;">Shuffle</button>
+    <button class="btn" id="restartBtn" style="margin-left: 10px;">Restart Game</button>
+    <div class="guesses" id="progress" style="display:none;"></div>
+    <div id="wordStats" style="margin-top: 12px;"></div>
+    </div>
+  </div>
+
+  <script>
+    let words = [];
+    let wordCluesMap = {};
+    let wordCluesLoaded = false;
+    fetch('word-clues.json')
+      .then(response => response.json())
+      .then(data => {
+        words = data.map(entry => entry.Answer);
+        data.forEach(entry => {
+          wordCluesMap[entry.Answer.trim().toLowerCase()] = {
+            ai_hint: entry["AI Clue"],
+            crossword_hint: entry["Crossword clue"]
+          };
+        });
+        wordCluesLoaded = true;
+        document.getElementById('loader').style.display = 'none';
+        initializeGame();
+      })
+      .catch(err => {
+        document.getElementById('loader').textContent = 'Failed to load word list.';
+        console.error('Failed to load word-clues.json:', err);
+      });
+
+    let targetWord = "";
+    let revealedIndices = new Set();
+    let guessedWords = [];
+    let correctCount = 0;
+    let totalPlayed = 0;
+    let foundWords = new Set();
+    let wrongGuesses = 0;
+    let correctWordsList = [];
+    let hintShown = false;
+    let wrongGuessesAfterHint = 0;
+
+    // Add state for hint pools and current hint word
+    let unusedHintWords = [];
+    let usedHintWords = [];
+    let currentHintWord = null;
+
+    const hintEl = document.getElementById("hint");
+    const revealBtn = document.getElementById("revealBtn");
+    const guessBtn = document.getElementById("guessBtn");
+    const guessInput = document.getElementById("guessInput");
+    const progressEl = document.getElementById("progress");
+    const restartBtn = document.getElementById("restartBtn");
+    const wordStatsEl = document.getElementById("wordStats");
+    const showHintBtn = document.getElementById("showHintBtn");
+    const hintContainer = document.getElementById("hintContainer");
+    const incorrectMsg = document.getElementById("incorrectMsg");
+
+    // Hint mode state
+    const HINT_MODES = {
+      BLANKS: 'blanks',
+      CROSSWORD: 'crossword',
+      AI: 'ai',
+      CROSSWORD_LETTER: 'crossword_letter'
+    };
+    let currentHintMode = HINT_MODES.BLANKS;
+
+    const hamburgerMenu = document.getElementById('hamburgerMenu');
+    const hintModeMenu = document.getElementById('hintModeMenu');
+    const modeBlanks = document.getElementById('modeBlanks');
+    const modeCrossword = document.getElementById('modeCrossword');
+    const modeAI = document.getElementById('modeAI');
+    const modeCrosswordLetter = document.getElementById('modeCrosswordLetter');
+
+    const celebrationToggle = document.getElementById('celebrationToggle');
+    const progressToggle = document.getElementById('progressToggle');
+    const progressBarContainer = document.getElementById('progressBarContainer');
+    const progressBar = document.getElementById('progressBar');
+    const milestoneMsg = document.getElementById('milestoneMsg');
+    const encourageMsg = document.getElementById('encourageMsg');
+    let celebrationOn = false;
+    let progressOn = false;
+    const milestonePercents = [10, 25, 50, 75, 100];
+    const milestoneWords = ["Great start!", "Quartermaster", "Word boss!", "Expert player", "Word genius!"];
+    let lastMilestone = 0;
+    celebrationToggle.checked = false;
+    progressToggle.checked = false;
+    celebrationToggle.addEventListener('change', () => { celebrationOn = celebrationToggle.checked; });
+    progressToggle.addEventListener('change', () => {
+      progressOn = progressToggle.checked;
+      progressBarContainer.style.display = progressOn ? '' : 'none';
+      milestoneMsg.style.display = 'none';
+      encourageMsg.style.display = progressOn ? '' : 'none';
+      updateProgressBarAndMessages();
+    });
+
+    function updateMenuSelection() {
+      modeBlanks.classList.toggle('selected', currentHintMode === HINT_MODES.BLANKS);
+      modeCrossword.classList.toggle('selected', currentHintMode === HINT_MODES.CROSSWORD);
+      modeAI.classList.toggle('selected', currentHintMode === HINT_MODES.AI);
+      modeCrosswordLetter.classList.toggle('selected', currentHintMode === HINT_MODES.CROSSWORD_LETTER);
+    }
+
+    hamburgerMenu.addEventListener('click', () => {
+      hintModeMenu.classList.toggle('open');
+    });
+
+    modeBlanks.addEventListener('click', () => {
+      setHintMode(HINT_MODES.BLANKS);
+      hintModeMenu.classList.remove('open');
+    });
+    modeCrossword.addEventListener('click', () => {
+      setHintMode(HINT_MODES.CROSSWORD);
+      hintModeMenu.classList.remove('open');
+    });
+    modeAI.addEventListener('click', () => {
+      setHintMode(HINT_MODES.AI);
+      hintModeMenu.classList.remove('open');
+    });
+    modeCrosswordLetter.addEventListener('click', () => {
+      setHintMode(HINT_MODES.CROSSWORD_LETTER);
+      hintModeMenu.classList.remove('open');
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!hamburgerMenu.contains(e.target) && !hintModeMenu.contains(e.target)) {
+        hintModeMenu.classList.remove('open');
+      }
+    });
+
+    updateMenuSelection();
+
+    function pickWord() {
+      targetWord = words[Math.floor(Math.random() * words.length)];
+      revealedIndices = new Set([0]); // Always reveal first letter
+      updateHint();
+      guessInput.value = "";
+      guessInput.focus();
+      revealBtn.disabled = false;
+      revealBtn.classList.remove("disabled");
+      wrongGuesses = 0;
+      wrongGuessesAfterHint = 0;
+      revealBtn.style.display = "none";
+      hintContainer.style.display = "none";
+      incorrectMsg.style.display = "none";
+      hintShown = false;
+    }
+
+    function updateHint() {
+      let display = "";
+      for (let i = 0; i < targetWord.length; i++) {
+        display += revealedIndices.has(i) ? targetWord[i].toUpperCase() : "_";
+        display += " ";
+      }
+      hintEl.textContent = display.trim();
+
+      if (revealedIndices.size === targetWord.length) {
+        revealBtn.disabled = true;
+        revealBtn.classList.add("disabled");
+      } else {
+        revealBtn.disabled = false;
+        revealBtn.classList.remove("disabled");
+      }
+    }
+
+    function revealRandomLetter() {
+      const indices = [];
+      for (let i = 0; i < targetWord.length; i++) {
+        if (!revealedIndices.has(i)) indices.push(i);
+      }
+      if (indices.length > 0) {
+        const index = indices[Math.floor(Math.random() * indices.length)];
+        revealedIndices.add(index);
+        updateHint();
+      }
+    }
+
+    function resetHintPool() {
+      // Only for crossword/ai modes
+      unusedHintWords = words.filter(w => {
+        const key = w.trim().toLowerCase();
+        return !foundWords.has(w) && wordCluesMap[key];
+      });
+      usedHintWords = [];
+    }
+
+    function showNextHint() {
+      if (!wordCluesLoaded) {
+        hintEl.textContent = 'Loading hints...';
+        hintEl.style.display = "block";
+        hintContainer.style.display = "block";
+        // Style for normal sentence
+        hintEl.style.fontSize = '1.2rem';
+        hintEl.style.letterSpacing = 'normal';
+        return;
+      }
+      if (currentHintMode === HINT_MODES.BLANKS) {
+        // Show fill-in-the-blanks UI
+        hintContainer.style.display = "block";
+        hintEl.style.display = "inline-block";
+        hintEl.style.fontSize = '2.5rem';
+        hintEl.style.letterSpacing = '0.5rem';
+        revealBtn.style.display = "none";
+        updateHint();
+        return;
+      }
+      // For crossword/ai/crossword_letter modes
+      if (unusedHintWords.length === 0) {
+        resetHintPool();
+        if (unusedHintWords.length === 0) {
+          hintEl.textContent = 'No more hints available.';
+          hintEl.style.display = "block";
+          hintContainer.style.display = "block";
+          // Style for normal sentence
+          hintEl.style.fontSize = '1.2rem';
+          hintEl.style.letterSpacing = 'normal';
+          return;
+        }
+      }
+      // Pick a random unused word
+      const idx = Math.floor(Math.random() * unusedHintWords.length);
+      currentHintWord = unusedHintWords[idx];
+      // Remove from unused, add to used
+      unusedHintWords.splice(idx, 1);
+      usedHintWords.push(currentHintWord);
+      // Show the relevant hint
+      const key = currentHintWord.trim().toLowerCase();
+      let clue = '';
+      if (currentHintMode === HINT_MODES.CROSSWORD) {
+        clue = wordCluesMap[key]?.crossword_hint || '(No crossword hint)';
+        hintEl.textContent = clue;
+      } else if (currentHintMode === HINT_MODES.AI) {
+        clue = wordCluesMap[key]?.ai_hint || '(No AI hint)';
+        hintEl.textContent = clue;
+      } else if (currentHintMode === HINT_MODES.CROSSWORD_LETTER) {
+        const crossword = wordCluesMap[key]?.crossword_hint || '(No crossword hint)';
+        const word = currentHintWord;
+        const first = word[0].toUpperCase();
+        const blanks = ' '.repeat(word.length > 1 ? 1 : 0) + '_ '.repeat(Math.max(0, word.length - 1)).trim();
+        clue = `${crossword}<br><br>${first}${blanks} (${word.length})`;
+        hintEl.innerHTML = clue;
+      }
+      hintEl.style.display = "block";
+      hintContainer.style.display = "block";
+      hintEl.style.fontSize = '1.2rem';
+      hintEl.style.letterSpacing = 'normal';
+      revealBtn.style.display = "none";
+    }
+
+    function showCorrectMessage(isMilestone) {
+      const correctMsg = document.getElementById('correctMsg');
+      correctMsg.textContent = 'Correct!';
+      correctMsg.style.display = 'block';
+      if (document.getElementById('celebrationToggle').checked) {
+        showSparkleShower(isMilestone);
+      }
+      setTimeout(() => {
+        correctMsg.style.display = 'none';
+      }, 2000);
+    }
+
+    function showSparkleShower(isMilestone) {
+      console.log('Sparkle shower triggered', isMilestone);
+      const shower = document.getElementById('sparkleShower');
+      shower.style.display = 'block';
+      shower.innerHTML = '';
+      const emojis = isMilestone ? ['✨','🥳','🚀','🥳'] : ['✨','🥳'];
+      const numEmojis = isMilestone ? 28 : 18;
+      const duration = isMilestone ? 1700 : 1200;
+      for (let i = 0; i < numEmojis; i++) {
+        const emoji = document.createElement('span');
+        emoji.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+        emoji.style.position = 'absolute';
+        const fromLeft = i % 2 === 0;
+        const baseX = fromLeft ? 30 : 70;
+        const spread = Math.random() * 20 + 10;
+        const x = baseX + (fromLeft ? spread : -spread);
+        emoji.style.left = x + '%';
+        emoji.style.bottom = '0px';
+        emoji.style.fontSize = (Math.random() * 10 + 28) + 'px';
+        emoji.style.opacity = 1;
+        emoji.style.transition = `transform ${duration}ms cubic-bezier(.4,1.4,.6,1), opacity 400ms`;
+        emoji.style.transform = 'translateY(0) scale(1)';
+        setTimeout(() => {
+          const arcY = -(Math.random() * 120 + 100);
+          const arcX = (fromLeft ? 1 : -1) * (Math.random() * 40 + 40);
+          emoji.style.transform = `translate(${arcX}px, ${arcY}px) scale(1.2)`;
+          emoji.style.opacity = 0;
+        }, 10);
+        shower.appendChild(emoji);
+      }
+      setTimeout(() => { shower.innerHTML = ''; shower.style.display = 'none'; }, duration + 500);
+    }
+
+    function updateProgressBarAndMessages() {
+      if (!progressOn) return;
+      const found = foundWords.size;
+      const total = words.length;
+      const percent = Math.floor((found / total) * 100);
+      progressBar.style.width = percent + '%';
+      // Milestone markers as vertical lines
+      const markerDiv = document.getElementById('milestoneMarkers');
+      markerDiv.innerHTML = '';
+      milestonePercents.forEach((p, idx) => {
+        const left = `calc(${p}% - 1px)`;
+        const marker = document.createElement('div');
+        marker.style.position = 'absolute';
+        marker.style.left = left;
+        marker.style.top = '-22px';
+        marker.style.width = '2px';
+        marker.style.height = '40px';
+        marker.style.background = percent >= p ? '#28a745' : (milestonePercents.findIndex(mp => percent < mp) === idx ? '#2996c7' : '#bbb');
+        marker.style.zIndex = '2';
+        markerDiv.appendChild(marker);
+      });
+      // Milestone labels below the progress bar
+      const labelDiv = document.getElementById('milestoneLabels');
+      labelDiv.innerHTML = '';
+      milestonePercents.forEach((p, idx) => {
+        const left = `calc(${p}% - 60px)`;
+        const label = document.createElement('div');
+        label.style.position = 'absolute';
+        label.style.left = left;
+        label.style.top = '0px';
+        label.style.width = '80px';
+        label.style.textAlign = 'center';
+        label.style.fontSize = '11px';
+        label.style.fontWeight = percent >= p ? 'bold' : 'normal';
+        label.style.color = percent >= p ? '#28a745' : (milestonePercents.findIndex(mp => percent < mp) === idx ? '#2996c7' : '#bbb');
+        label.textContent = milestoneWords[idx];
+        labelDiv.appendChild(label);
+      });
+      // Find current and next milestone
+      let milestoneIdx = milestonePercents.findIndex(p => percent < p);
+      if (milestoneIdx === -1) milestoneIdx = milestonePercents.length;
+      let prevMilestone = milestoneIdx === 0 ? 0 : milestonePercents[milestoneIdx-1];
+      let nextMilestone = milestonePercents[milestoneIdx] || 100;
+      let nextMilestoneWord = milestoneWords[milestoneIdx] || milestoneWords[milestoneWords.length-1];
+      // Show milestone message if just reached
+      if (milestonePercents.includes(percent) && percent !== lastMilestone) {
+        milestoneMsg.textContent = milestoneWords[milestonePercents.indexOf(percent)];
+        milestoneMsg.style.display = 'block';
+        showCorrectMessage(true);
+        setTimeout(() => { milestoneMsg.style.display = 'none'; }, 2500);
+        lastMilestone = percent;
+      }
+      // Encouragement message
+      if (percent < 100) {
+        const wordsToNext = Math.ceil((nextMilestone/100)*total) - found;
+        encourageMsg.textContent = `${wordsToNext} word${wordsToNext === 1 ? '' : 's'} to go for the next level!`;
+        encourageMsg.style.display = 'block';
+      } else {
+        encourageMsg.textContent = 'You found all the words!';
+        encourageMsg.style.display = 'block';
+      }
+    }
+
+    function handleGuess() {
+      const guess = guessInput.value.trim().toLowerCase();
+      if (!guess) return;
+      guessedWords.push(guess); // Always track every guess
+      // Duplicate word prevention (exact match only)
+      if ([...foundWords].some(w => w.trim().toLowerCase() === guess)) {
+        incorrectMsg.textContent = "You've already found this word!";
+        incorrectMsg.style.display = "block";
+        updateWordStats();
+        return;
+      }
+      totalPlayed++;
+      incorrectMsg.style.display = "none";
+      if (words.includes(guess)) {
+        correctCount++;
+        foundWords.add(guess);
+        if (!correctWordsList.includes(guess)) {
+          correctWordsList.push(guess);
+        }
+        updateWordStats();
+        if (typeof celebrationOn === 'undefined') {
+          window.celebrationOn = document.getElementById('celebrationToggle').checked;
+        }
+        showCorrectMessage(milestonePercents.includes(Math.floor((foundWords.size / words.length) * 100)));
+        pickWord();
+      } else {
+        wrongGuesses++;
+        if (hintShown && currentHintMode === HINT_MODES.BLANKS) {
+          wrongGuessesAfterHint++;
+          if (wrongGuessesAfterHint >= 3) {
+            revealBtn.style.display = "inline-block";
+          }
+        }
+        incorrectMsg.textContent = "Incorrect word. Try again.";
+        incorrectMsg.style.display = "block";
+        updateWordStats();
+      }
+      if (currentHintMode !== HINT_MODES.BLANKS || words.includes(guess)) {
+        hintContainer.style.display = "none";
+        hintShown = false;
+      }
+    }
+
+    function updateWordStats() {
+      wordStatsEl.innerHTML = `
+        <div><strong>Words found:</strong> ${foundWords.size} / ${words.length}</div>
+        <div style="margin-top:8px;"><strong>All words guessed:</strong> ${guessedWords.join(", ")}</div>
+        <div style="margin-top:8px;"><strong>Correct words:</strong> ${correctWordsList.join(", ")}</div>
+      `;
+      progressBarContainer.style.display = progressOn ? '' : 'none';
+      encourageMsg.style.display = progressOn ? '' : 'none';
+      updateProgressBarAndMessages();
+    }
+
+    function restartGame() {
+      guessedWords = [];
+      correctCount = 0;
+      totalPlayed = 0;
+      foundWords = new Set();
+      wrongGuesses = 0;
+      correctWordsList = [];
+      lastMilestone = 0;
+      updateWordStats();
+      pickWord();
+    }
+
+    // Wrap all game initialization in a function
+    function initializeGame() {
+      pickWord();
+      updateWordStats();
+      revealBtn.style.display = "none";
+    }
+
+    // Initialize
+    revealBtn.addEventListener("click", revealRandomLetter);
+    guessBtn.addEventListener("click", handleGuess);
+    guessInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") handleGuess();
+    });
+    restartBtn.addEventListener("click", restartGame);
+    showHintBtn.addEventListener("click", () => {
+      guessInput.focus();
+      if (currentHintMode === HINT_MODES.BLANKS) {
+        // If a hint is already being shown, pick a new word and show its hint
+        if (hintContainer.style.display === "block") {
+          pickWord();
+        }
+        hintShown = true;
+        wrongGuessesAfterHint = 0;
+        revealBtn.style.display = "none";
+        hintContainer.style.display = "block";
+        hintEl.style.fontSize = '2.5rem';
+        hintEl.style.letterSpacing = '0.5rem';
+        updateHint();
+      } else {
+        // For crossword/ai modes
+        showNextHint();
+        hintShown = true;
+        wrongGuessesAfterHint = 0;
+        revealBtn.style.display = "none";
+      }
+    });
+
+    // When switching modes, reset hint pool for crossword/ai
+    function setHintMode(mode) {
+      currentHintMode = mode;
+      updateMenuSelection();
+      if (mode === HINT_MODES.BLANKS) {
+        hintContainer.style.display = "none";
+        currentHintWord = null;
+      } else {
+        resetHintPool();
+        currentHintWord = null;
+        hintContainer.style.display = "none";
+      }
+    }
+
+    // On game start, initialize hint pool for non-blanks mode
+    if (currentHintMode !== HINT_MODES.BLANKS) {
+      resetHintPool();
+    }
+
+    // Add event listener to hide error when input is cleared
+    guessInput.addEventListener('input', () => {
+      if (!guessInput.value.trim()) {
+        incorrectMsg.style.display = 'none';
+        document.getElementById('correctMsg').style.display = 'none';
+      }
+    });
+
+    // Add shuffle logic
+    const outerLetterIds = ["outer0", "outer1", "outer2", "outer3", "outer4", "outer5"];
+    let outerLetters = ["R", "O", "S", "C", "T", "I"];
+    function shuffleArray(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+    }
+    function updateFlowerLetters() {
+      for (let i = 0; i < 6; i++) {
+        document.getElementById(outerLetterIds[i]).textContent = outerLetters[i];
+      }
+    }
+    document.getElementById("shuffleBtn").addEventListener("click", () => {
+      shuffleArray(outerLetters);
+      updateFlowerLetters();
+    });
+
+    // On page load, set toggles to default off
+    celebrationOn = false;
+    progressOn = false;
+    progressBarContainer.style.display = 'none';
+    encourageMsg.style.display = 'none';
+  </script>
+</body>
+</html>
